@@ -191,6 +191,13 @@ jobs:
           fi
 
           USER_PROMPT_CONTENT="$(cat "$USER_PROMPT_FILE")"
+          
+          # 從目前 issue 分支讀取模型；手動輸入的 ID 不必列入 .pi/models.json。
+          # -e 會在設定缺失時失敗，避免 Pi 靜默使用其他預設模型。
+          SELECTED_PROVIDER="$(jq -er '.defaultProvider | select(type == "string" and length > 0)' .pi/settings.json)"
+          SELECTED_MODEL="$(jq -er '.defaultModel | select(type == "string" and length > 0)' .pi/settings.json)"
+          echo "使用模型：${SELECTED_PROVIDER} / ${SELECTED_MODEL}"
+
 
           # 固定 Pi Coding Agent 版本，避免 @latest 造成不可重現結果或遭上游 breaking change 影響。
           # 可透過 repo variable PI_CODING_AGENT_VERSION 覆寫。
@@ -208,6 +215,7 @@ jobs:
           set +e
           set -o pipefail
           npm_config_loglevel=error npx -y "@mariozechner/pi-coding-agent@${PI_CODING_AGENT_VERSION}" \
+            --provider "$SELECTED_PROVIDER" --model "$SELECTED_MODEL" \
             -p "請將最終結果寫入 artifacts/${COMMENT_ID}/result.md 。我的提示詞為: ${USER_PROMPT_CONTENT}" \
             --mode json \
             2> "artifacts/${COMMENT_ID}/error.log" \
